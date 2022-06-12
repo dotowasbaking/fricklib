@@ -1,8 +1,8 @@
 fricklib a ui lib made with synapse drawing library i have no idea if it works on other exploits probably not have fun
 !!! this project was abandoned so theres a bunch of unfinished/janky shit in it
-```
+```lua
 > library
-    new({Title = title <string>})
+    .new({Title = title <string>})
         :Tab({Title = title <string>})
             :Subframe({Title = title <string>})
                 :Toggle({
