@@ -1,4 +1,3 @@
-local dw = Drawing
 local gui
 
 local f_require = loadfile("f_require.lua")()
@@ -358,7 +357,7 @@ end
 function dwBase.new(type)
     local self = setmetatable({}, dwBase)
 
-    self._obj = dw.new(type)
+    self._obj = Drawing.new(type)
     self.Class = type
     self._welds = {}
     self._weldConnections = {}
