@@ -55,6 +55,7 @@ fricklib a ui lib made with synapse drawing library i have no idea if it works o
     :Notify(text <string>, duration <float[optional]>)
     :SetTitle(text <string>)
     :SetKeybind(keybind <EnumItem>)
+    :SetAccentColor(<Color3>)
     :Hide()
     :Show()
     :Open()
