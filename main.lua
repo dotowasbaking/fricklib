@@ -1,9 +1,253 @@
 local gui
 
-local f_require = loadfile("f_require.lua")()
-local f_utils = f_require("f_utils.lua")
+local customKeyboard = (function()
+    local contextActionService = game:service("ContextActionService")
+    local userInputService = game:service("UserInputService")
 
-local customKeyboard = f_require("customKeyboard.lua").new("__frickLibKeyboard")
+    local customKeyboard = {Keypress = {}, OnStop = {}, OnBackspace = {}, OnPaste = {}}
+
+    customKeyboard.__index = customKeyboard
+
+    customKeyboard._shiftSymbols = {
+        ["`"] = "~";
+        ["1"] = "!";
+        ["2"] = "@";
+        ["3"] = "#";
+        ["4"] = "$";
+        ["5"] = "%";
+        ["6"] = "^";
+        ["7"] = "&";
+        ["8"] = "*";
+        ["9"] = "(";
+        ["0"] = ")";
+        ["-"] = "_";
+        ["="] = "+";
+        ["["] = "{";
+        ["]"] = "}";
+        ["\\"] = "|";
+        [";"] = ":";
+        ["\'"] = "\"";
+        [","] = "<";
+        ["."] = ">";
+        ["/"] = "?";
+    }
+
+    function customKeyboard:Start()
+        assert(not self._running)
+
+        self._running = true
+
+        contextActionService:BindAction(
+            self._bindID,
+            function(actionName, inputState, inputObject)
+                local keycodeValue = inputObject.KeyCode.Value
+                local state = inputState.Value
+                local success, keyboardInput = pcall(string.char, keycodeValue)
+
+                if keycodeValue == 303 or keycodeValue == 304 then
+                    if state == 0 then
+                        self._shiftDown = true
+                    else
+                        self._shiftDown = false
+                    end
+                elseif keycodeValue == 305 or keycodeValue == 306 then
+                    if state == 0 then
+                        self._ctrlDown = true
+                    else
+                        self._ctrlDown = false
+                    end
+                elseif keycodeValue == 8 then
+                    if self.OnBackspace._backspaceCallback and state == 0 then
+                        self.OnBackspace._backspaceCallback()
+                        local pressTime = os.clock()
+
+                        while userInputService:IsKeyDown(Enum.KeyCode.Backspace) do
+                            task.wait(0.04)
+
+                            if os.clock() - pressTime < 0.4 then
+                                continue
+                            end
+
+                            self.OnBackspace._backspaceCallback()
+                        end
+                    end
+                elseif keycodeValue == 118 and self._ctrlDown then
+                    if self.OnPaste._pasteCallback and state == 0 then
+                        if self._dummyTextBox then
+                            while
+                                userInputService:IsKeyDown(Enum.KeyCode.LeftControl) or
+                                userInputService:IsKeyDown(Enum.KeyCode.RightControl) or
+                                userInputService:IsKeyDown(Enum.KeyCode.V)
+                            do
+                                task.wait() -- scuffed...
+                            end
+
+                            local oldText = self._dummyTextBox.Text
+
+                            local changed; changed = self._dummyTextBox:GetPropertyChangedSignal("Text"):Connect(function()
+                                self.OnPaste._pasteCallback(self._dummyTextBox.Text)
+
+                                self._dummyTextBox.Text = oldText
+                                self._dummyTextBox:ReleaseFocus()
+
+                                changed:Disconnect()
+                            end)
+
+                            self._dummyTextBox:CaptureFocus()
+
+                            keypress(0x11)
+                            keypress(0x56)
+
+                            keyrelease(0x11)
+                            keyrelease(0x56)
+                        end
+                    end
+                elseif keycodeValue == 13 or keycodeValue == 271 then
+                    self:Stop()
+                elseif success and not self._ctrlDown and state == 0 then
+                    if self.Keypress._keypressCallback then
+                        self.Keypress._keypressCallback(self:_getChar(keyboardInput))
+                    end
+                end
+
+                return Enum.ContextActionResult.Sink
+            end,
+            false,
+            --self._priorityOverwrite or 9e9,
+            table.unpack(Enum.KeyCode:GetEnumItems())
+        )
+    end
+
+    function customKeyboard:Stop()
+        assert(self._running)
+
+        contextActionService:UnbindAction(self._bindID)
+
+        if self.Keypress._keypressCallback then
+            self.Keypress:Disconnect()
+        end
+
+        if self.OnBackspace._backspaceCallback then
+            self.OnBackspace:Disconnect()
+        end
+
+        if self.OnPaste._pasteCallback then
+            self.OnPaste:Disconnect()
+        end
+
+        self._running = false
+
+        if self.OnStop._stopCallback then
+            self.OnStop._stopCallback()
+        end
+    end
+
+    function customKeyboard.Keypress:Connect(func)
+        assert(typeof(func) == "function") -- me when 3ds say that type() get gone or something XD!!!!!!!
+        assert(not self._keypressCallback)
+
+        self._keypressCallback = func
+    end
+
+    function customKeyboard.Keypress:Disconnect()
+        assert(self._keypressCallback)
+
+        self._keypressCallback = nil
+    end
+
+    function customKeyboard.OnStop:Connect(func)
+        assert(typeof(func) == "function")
+        assert(not self._stopCallback)
+
+        self._stopCallback = func
+    end
+
+    function customKeyboard.OnStop:Disconnect()
+        assert(self._stopCallback)
+
+        self._stopCallback = nil
+    end
+
+    function customKeyboard.OnBackspace:Connect(func)
+        assert(typeof(func) == "function")
+        assert(not self._backspaceCallback)
+
+        self._backspaceCallback = func
+    end
+
+    function customKeyboard.OnBackspace:Disconnect()
+        assert(self._backspaceCallback)
+
+        self._backspaceCallback = nil
+    end
+
+    function customKeyboard.OnPaste:Connect(func)
+        assert(typeof(func) == "function")
+        assert(not self._pasteCallback)
+
+        self._pasteCallback = func
+    end
+
+    function customKeyboard.OnPaste:Disconnect()
+        assert(self._pasteCallback)
+
+        self._pasteCallback = nil
+    end
+
+    function customKeyboard:Destroy()
+        contextActionService:UnbindAction(self._bindID)
+
+        if self._stopCallback then
+            self._stopCallback()
+        end
+
+        setmetatable(self, nil)
+    end
+
+    function customKeyboard:_getChar(char)
+        if self._shiftDown then
+            local symbol = self._shiftSymbols[char]
+
+            if symbol then
+                char = symbol
+            else
+                char = string.upper(char)
+            end
+        end
+
+        return char
+    end
+
+    function customKeyboard.new(bindID)
+        local self = setmetatable({}, customKeyboard)
+
+        self._bindID = bindID or "__customKeyboard"
+
+        --assert(not contextActionService:GetBoundActionInfo(self._bindID))
+
+        for _, v in ipairs(game:service("Players").LocalPlayer.PlayerGui:GetDescendants()) do
+            local parent = v:FindFirstAncestorOfClass("ScreenGui")
+
+            if not parent then
+                continue
+            end
+
+            if not parent.Enabled then
+                continue
+            end
+
+            if v:IsA("TextBox") then
+                self._dummyTextBox = v
+
+                break
+            end
+        end
+
+        return self
+    end
+
+    return customKeyboard
+end)().new("__frickLibKeyboard")
 
 local players = game:service("Players")
 local contextActionService = game:service("ContextActionService")
@@ -243,7 +487,7 @@ function dwBase:GetWelds()
                         table.insert(objects, tb)
                     end
                     f(v)
-               elseif type(v) == "table" then
+            elseif type(v) == "table" then
                     f(v)
                 end
             end
@@ -399,10 +643,10 @@ end
 
 local function GetXY(obj)
     local mousePos = UserInputService:GetMouseLocation()
-	local sX, xY = obj._obj.Size.X, obj._obj.Size.Y
-	local pX, pY = math.clamp(mousePos.X - obj._obj.Position.X, 0, sX), math.clamp(mousePos.Y - obj._obj.Position.Y, 0, xY)
+    local sX, xY = obj._obj.Size.X, obj._obj.Size.Y
+    local pX, pY = math.clamp(mousePos.X - obj._obj.Position.X, 0, sX), math.clamp(mousePos.Y - obj._obj.Position.Y, 0, xY)
 
-	return pX/sX, pY/xY
+    return pX/sX, pY/xY
 end
 
 function lib:Tab(data)
