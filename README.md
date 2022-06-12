@@ -1,0 +1,2 @@
+# fricklib
+lib
