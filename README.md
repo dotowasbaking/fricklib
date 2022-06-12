@@ -2,7 +2,7 @@ fricklib a ui lib made with synapse drawing library i have no idea if it works o
 !!! this project was abandoned so theres a bunch of unfinished/janky shit in it
 ```lua
 > library
-    .new({Title = title <string>})
+    .new({Title = title <string>, Icon = imageLink <string[optional]>, Size = size <Vector2>, Color = accentColor <Color3>})
         :Tab({Title = title <string>})
             :Subframe({Title = title <string>})
                 :Toggle({
