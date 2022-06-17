@@ -210,7 +210,7 @@ local customKeyboard = (function()
 
         self._running = true
 
-        contextActionService:BindAction(
+        contextActionService:BindCoreAction(
             self._bindID,
             function(actionName, inputState, inputObject)
                 local keycodeValue = inputObject.KeyCode.Value
@@ -294,7 +294,7 @@ local customKeyboard = (function()
     function customKeyboard:Stop()
         assert(self._running)
 
-        contextActionService:UnbindAction(self._bindID)
+        contextActionService:UnbindCoreAction(self._bindID)
 
         if self.Keypress._keypressCallback then
             self.Keypress:Disconnect()
@@ -368,7 +368,7 @@ local customKeyboard = (function()
     end
 
     function customKeyboard:Destroy()
-        contextActionService:UnbindAction(self._bindID)
+        contextActionService:UnbindCoreAction(self._bindID)
 
         if self._stopCallback then
             self._stopCallback()
@@ -808,7 +808,7 @@ function lib:Destroy()
     --self._miscHeartbeatConnection:Disconnect()
 
     for i, _ in pairs(self._boundActionNames) do
-        contextActionService:UnbindAction(i)
+        contextActionService:UnbindCoreAction(i)
     end
 
     setmetatable(self, nil)
@@ -1108,7 +1108,7 @@ function lib:Tab(data)
     
                 local function bind(newInput)
                     if newInput ~= "None" then
-                        contextActionService:BindActionAtPriority(
+                        contextActionService:BindCoreActionAtPriority(
                             casBindName,
                             keyCall,
                             false,
@@ -1128,7 +1128,7 @@ function lib:Tab(data)
 
                         button._keybindButton._text:Set("Text", buttonName)
                     else
-                        contextActionService:UnbindAction(casBindName)
+                        contextActionService:UnbindCoreAction(casBindName)
                         button._keybindButton._text:Set("Text", "None")
 
                         if data.KeybindChangedCallback then
@@ -1153,7 +1153,7 @@ function lib:Tab(data)
                         button._text:_accentElement()
                         button._keybind = data.DefaultKeybind
     
-                        contextActionService:BindAction(
+                        contextActionService:BindCoreAction(
                             setBindName,
                             function(_, inputState, inputObject)
                                 if (inputObject.KeyCode.Name == "Unknown" or inputObject.KeyCode.Name == 'Backspace')--[[ or inputState ~= Enum.UserInputState.Begin]] then
@@ -1161,8 +1161,8 @@ function lib:Tab(data)
                                     button._text:Set("Color", Color3.new(1, 1, 1))
                                     button._text:Set("Text", "None")
                                     
-                                    contextActionService:UnbindAction(casBindName)
-                                    contextActionService:UnbindAction(setBindName)
+                                    contextActionService:UnbindCoreAction(casBindName)
+                                    contextActionService:UnbindCoreAction(setBindName)
                                     gui._boundActionNames[casBindName] = nil
                                     gui._boundActionNames[setBindName] = nil
 
@@ -1174,7 +1174,7 @@ function lib:Tab(data)
                                     return
                                 end
 
-                                contextActionService:UnbindAction(setBindName)
+                                contextActionService:UnbindCoreAction(setBindName)
                                 gui._boundActionNames[setBindName] = nil
     
                                 button._text:Set("Color", Color3.new(1, 1, 1))
@@ -1666,7 +1666,7 @@ function lib:Tab(data)
 
                     configButtons += 1
 
-                    contextActionService:BindAction(
+                    contextActionService:BindCoreAction(
                         "__configFrameScroll",
                         function(_, _, inputObject)
                             if not buttonFrame:IsFocused(true) then
@@ -2589,7 +2589,7 @@ function lib.new(data)
     self._inputConnection = {Disconnect = function() end} -- me when hack
     local clickBindName = ("__fricklibClick%s"):format(self._GUID)
 
-    contextActionService:BindActionAtPriority(
+    contextActionService:BindCoreActionAtPriority(
         clickBindName,
         function(_, inputState)
             if inputState ~= Enum.UserInputState.Begin then
